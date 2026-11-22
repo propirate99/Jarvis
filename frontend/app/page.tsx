@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
+import Image from "next/image";
 
 type Message = {
   role: "user" | "assistant";
@@ -26,15 +28,12 @@ type IconName =
   | "brain"
   | "arrow"
   | "spark"
-  | "plus"
-  | "check"
   | "shield"
-  | "activity"
   | "send"
   | "refresh"
-  | "clock"
-  | "chevron"
-  | "command";
+  | "chevron";
+
+type Accent = "yellow" | "gold" | "orange" | "peach" | "champagne";
 
 const navItems: { id: Section; label: string; icon: IconName }[] = [
   { id: "overview", label: "Overview", icon: "grid" },
@@ -49,60 +48,54 @@ const navItems: { id: Section; label: string; icon: IconName }[] = [
 const moduleCards: {
   id: Exclude<Section, "overview" | "assistant">;
   title: string;
-  eyebrow: string;
   description: string;
   icon: IconName;
-  accent: string;
+  accent: Accent;
   prompt: string;
   action: string;
 }[] = [
   {
     id: "budget",
     title: "Budget audit",
-    eyebrow: "01 / FINANCES",
     description: "Understand income, expenses and spending patterns using the figures you provide.",
     icon: "wallet",
-    accent: "mint",
+    accent: "yellow",
     prompt: "Audit my monthly budget",
     action: "Start an audit",
   },
   {
     id: "academics",
     title: "Assignments",
-    eyebrow: "02 / ACADEMICS",
     description: "Keep coursework, submission dates and study priorities organised.",
     icon: "book",
-    accent: "blue",
+    accent: "gold",
     prompt: "Check my pending assignments",
     action: "Review assignments",
   },
   {
     id: "events",
     title: "Event planner",
-    eyebrow: "03 / PLANNING",
     description: "Create and retrieve event records, then work through the details and logistics.",
     icon: "calendar",
-    accent: "violet",
+    accent: "orange",
     prompt: "Show all events in the database",
     action: "View saved events",
   },
   {
     id: "recovery",
     title: "Recovery support",
-    eyebrow: "04 / WELLBEING",
     description: "Reflect on triggers, urges and progress with practical, non-judgemental support.",
     icon: "heart",
-    accent: "rose",
+    accent: "peach",
     prompt: "Help me track my recovery progress",
     action: "Open recovery support",
   },
   {
     id: "behaviour",
     title: "Behaviour insights",
-    eyebrow: "05 / PERSONAL PATTERNS",
-    description: "Review routines and productivity from real activity logs—not guessed statistics.",
+    description: "Review routines and productivity from real activity logs, not guessed statistics.",
     icon: "brain",
-    accent: "amber",
+    accent: "champagne",
     prompt: "Analyse my daily productivity",
     action: "Review my patterns",
   },
@@ -147,68 +140,216 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
       return <svg {...common}><path d="M5 12h13M13 6l6 6-6 6" /></svg>;
     case "spark":
       return <svg {...common}><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z" /><path d="m19 16 .8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z" /></svg>;
-    case "plus":
-      return <svg {...common}><path d="M12 5v14M5 12h14" /></svg>;
-    case "check":
-      return <svg {...common}><path d="m5 12 4 4L19 6" /></svg>;
     case "shield":
       return <svg {...common}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-4" /></svg>;
-    case "activity":
-      return <svg {...common}><path d="M3 12h4l3-8 4 16 3-8h4" /></svg>;
     case "send":
       return <svg {...common}><path d="m21 3-7.2 18-3.8-7-7-3.8L21 3Z" /><path d="M10 14 21 3" /></svg>;
     case "refresh":
       return <svg {...common}><path d="M20 7v5h-5M4 17v-5h5" /><path d="M5.6 9A7 7 0 0 1 18 6l2 1M4 17l2 1a7 7 0 0 0 12.4-3" /></svg>;
-    case "clock":
-      return <svg {...common}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></svg>;
     case "chevron":
       return <svg {...common}><path d="m9 18 6-6-6-6" /></svg>;
-    case "command":
-      return <svg {...common}><path d="M9 7V5a2 2 0 1 0-2 2h10a2 2 0 1 0-2-2v14a2 2 0 1 0 2-2H7a2 2 0 1 0 2 2V7Z" /></svg>;
     default:
       return null;
   }
 }
 
 function getPageHeading(section: Section) {
-  const headings: Record<Section, { eyebrow: string; title: string; description: string }> = {
+  const headings: Record<Section, { title: string; description: string }> = {
     overview: {
-      eyebrow: "PERSONAL COMMAND CENTRE",
       title: "Make room for what matters.",
       description: "Your personal workspace for staying organised, intentional and in control.",
     },
     assistant: {
-      eyebrow: "JARVIS 1B / CONVERSATION",
       title: "Your assistant, in focus.",
       description: "A specialised assistant for the areas you choose to manage.",
     },
     budget: {
-      eyebrow: "01 / FINANCES",
       title: "Budget audit",
       description: "Review real income and spending figures. No estimates or invented transactions.",
     },
     academics: {
-      eyebrow: "02 / ACADEMICS",
       title: "Assignment workspace",
       description: "Bring your coursework, submission dates and study priorities into one place.",
     },
     events: {
-      eyebrow: "03 / PLANNING",
       title: "Event planner",
       description: "Keep event details organised and retrieve only the events actually saved.",
     },
     recovery: {
-      eyebrow: "04 / WELLBEING",
       title: "Recovery support",
       description: "A private, supportive space to reflect on habits, triggers and progress.",
     },
     behaviour: {
-      eyebrow: "05 / PERSONAL PATTERNS",
       title: "Behaviour insights",
-      description: "Understand your routines from information you provide—not assumptions.",
+      description: "Understand your routines from information you provide, not assumptions.",
     },
   };
   return headings[section];
+}
+
+/* ---------------------------------------------------------------------
+   Specular highlight: feeds the pointer position to CSS so a soft light
+   follows the cursor across glass controls and cards.
+   --------------------------------------------------------------------- */
+function trackPointer(event: ReactPointerEvent<HTMLElement>) {
+  const rect = event.currentTarget.getBoundingClientRect();
+  event.currentTarget.style.setProperty("--mx", `${event.clientX - rect.left}px`);
+  event.currentTarget.style.setProperty("--my", `${event.clientY - rect.top}px`);
+}
+
+/* ---------------------------------------------------------------------
+   Real refraction (Chromium only, progressive enhancement).
+   Generates a displacement map from the element's own rounded shape and
+   feeds it to an SVG feDisplacementMap used as a backdrop-filter, so
+   content scrolling underneath bends at the glass edge like a lens.
+   Safari, Firefox and "reduce transparency" keep the plain frosted glass.
+   --------------------------------------------------------------------- */
+type LensMap = { src: string; width: number; height: number; scale: number };
+
+function canRefract() {
+  if (typeof window === "undefined") return false;
+  const isChromium = /Chrome\//.test(navigator.userAgent);
+  const reduced = window.matchMedia("(prefers-reduced-transparency: reduce)").matches;
+  return isChromium && !reduced && CSS.supports("backdrop-filter", "url(#lens) blur(1px)");
+}
+
+function buildLensMap(width: number, height: number, radius: number, bezel: number, depth: number): LensMap | null {
+  const w = Math.round(width);
+  const h = Math.round(height);
+  const k = w * h > 120_000 ? 0.5 : 1; // lower-resolution map for big elements
+  const cw = Math.max(1, Math.round(w * k));
+  const ch = Math.max(1, Math.round(h * k));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = cw;
+  canvas.height = ch;
+  const context = canvas.getContext("2d");
+  if (!context) return null;
+
+  const image = context.createImageData(cw, ch);
+  const halfW = w / 2;
+  const halfH = h / 2;
+  const r = Math.min(radius, halfW, halfH);
+  const band = Math.min(bezel, halfW, halfH);
+
+  for (let y = 0; y < ch; y++) {
+    for (let x = 0; x < cw; x++) {
+      const cx = (x + 0.5) / k - halfW;
+      const cy = (y + 0.5) / k - halfH;
+      const qx = Math.abs(cx) - (halfW - r);
+      const qy = Math.abs(cy) - (halfH - r);
+      const ox = Math.max(qx, 0);
+      const oy = Math.max(qy, 0);
+      const outside = Math.hypot(ox, oy);
+      const inset = r - (outside + Math.min(Math.max(qx, qy), 0)); // distance in from the edge
+
+      let dx = 0;
+      let dy = 0;
+      if (inset < band) {
+        const strength = (1 - Math.max(inset, 0) / band) ** 2; // strongest at the very edge
+        let nx = 0;
+        let ny = 0;
+        if (outside > 0) {
+          nx = (Math.sign(cx) * ox) / outside;
+          ny = (Math.sign(cy) * oy) / outside;
+        } else if (qx > qy) {
+          nx = Math.sign(cx);
+        } else {
+          ny = Math.sign(cy);
+        }
+        dx = -nx * strength; // sample from further inside the glass
+        dy = -ny * strength;
+      }
+
+      const i = (y * cw + x) * 4;
+      image.data[i] = Math.round(127.5 + dx * 127.5);
+      image.data[i + 1] = Math.round(127.5 + dy * 127.5);
+      image.data[i + 2] = 128;
+      image.data[i + 3] = 255;
+    }
+  }
+
+  context.putImageData(image, 0, 0);
+  return { src: canvas.toDataURL(), width: w, height: h, scale: depth * 2 };
+}
+
+function useLiquidLens<T extends HTMLElement>(bezel: number, depth: number) {
+  const ref = useRef<T>(null);
+  const rawId = useId();
+  const id = `lens${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
+  const [map, setMap] = useState<LensMap | null>(null);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || !canRefract()) return;
+
+    let frame = 0;
+    const rebuild = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const { width, height } = element.getBoundingClientRect();
+        if (width < 8 || height < 8) return;
+        const radius = parseFloat(getComputedStyle(element).borderTopLeftRadius) || 0;
+        setMap(buildLensMap(width, height, radius, bezel, depth));
+      });
+    };
+
+    const observer = new ResizeObserver(rebuild);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [bezel, depth]);
+
+  const style: CSSProperties | undefined = map
+    ? { backdropFilter: `url(#${id}) blur(6px) saturate(190%) brightness(1.08)` }
+    : undefined;
+
+  const defs = map ? (
+    <svg className="lens-defs" width="0" height="0" aria-hidden="true" focusable="false">
+      <defs>
+        <filter id={id} filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB" x={0} y={0} width={map.width} height={map.height}>
+          <feImage href={map.src} x={0} y={0} width={map.width} height={map.height} preserveAspectRatio="none" result="map" />
+          <feDisplacementMap in="SourceGraphic" in2="map" scale={map.scale} xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </defs>
+    </svg>
+  ) : null;
+
+  return { ref, style, defs };
+}
+
+/* Floating chat composer: a glass control that messages scroll underneath. */
+function ChatComposer({
+  value,
+  onChange,
+  onSubmit,
+  loading,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  loading: boolean;
+}) {
+  const lens = useLiquidLens<HTMLFormElement>(16, 10);
+
+  return (
+    <form
+      ref={lens.ref}
+      className="composer floating glass"
+      style={lens.style}
+      onPointerMove={trackPointer}
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit();
+      }}
+    >
+      {lens.defs}
+      <input value={value} onChange={(event) => onChange(event.target.value)} placeholder="Message JARVIS…" aria-label="Message JARVIS" disabled={loading} />
+      <button type="submit" disabled={loading || !value.trim()} aria-label="Send message"><Icon name="send" size={17} /></button>
+    </form>
+  );
 }
 
 export default function Home() {
@@ -221,16 +362,23 @@ export default function Home() {
   const [currentDate, setCurrentDate] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  const sidebarLens = useLiquidLens<HTMLElement>(22, 14);
+  const topbarLens = useLiquidLens<HTMLElement>(18, 10);
+
   // Read the current date only in the browser. Next.js 16 prerenders
   // Client Components on the server, so Date must not be read during render.
   useEffect(() => {
-    setCurrentDate(
-      new Intl.DateTimeFormat("en-IN", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-      }).format(new Date())
-    );
+    const frame = window.requestAnimationFrame(() => {
+      setCurrentDate(
+        new Intl.DateTimeFormat("en-IN", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        }).format(new Date())
+      );
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
@@ -258,6 +406,7 @@ export default function Home() {
   }, [messages, loading]);
 
   const pageHeading = getPageHeading(activeSection);
+  const activeIndex = Math.max(0, navItems.findIndex((item) => item.id === activeSection));
 
   async function sendMessage(text = input) {
     const message = text.trim();
@@ -329,22 +478,28 @@ export default function Home() {
 
   return (
     <main className="app">
-      <div className="blob blob-a" />
-      <div className="blob blob-b" />
-      <div className="blob blob-c" />
+      <div className="backdrop" aria-hidden="true">
+        <div className="blob blob-a" />
+        <div className="blob blob-b" />
+        <div className="blob blob-c" />
+      </div>
 
-      <aside className="sidebar glass">
+      {/* Glass layer 1: navigation (sidebar on desktop, floating dock on phones) */}
+      <aside ref={sidebarLens.ref} className="sidebar glass" style={sidebarLens.style} onPointerMove={trackPointer}>
+        {sidebarLens.defs}
         <button className="brand" onClick={() => setActiveSection("overview")} aria-label="JARVIS overview">
-          <span className="brand-mark"><img src="/app-logo.png" alt="" /></span>
+          <span className="brand-mark"><Image src="/app-logo.png" alt="" width={42} height={42} /></span>
           <span className="brand-name">JARVIS<small>1B</small></span>
         </button>
-        <nav className="nav" aria-label="Main navigation">
+        <nav className="nav" aria-label="Main navigation" style={{ "--i": activeIndex, "--n": navItems.length } as CSSProperties}>
+          <span className="nav-lens" aria-hidden="true" />
           {navItems.map((item) => (
             <button
               key={item.id}
               className={`nav-item ${activeSection === item.id ? "active" : ""}`}
               onClick={() => { setActiveSection(item.id); setNotice(""); }}
               aria-current={activeSection === item.id ? "page" : undefined}
+              aria-label={item.label}
               title={item.label}
             >
               <Icon name={item.icon} size={19} />
@@ -355,11 +510,16 @@ export default function Home() {
       </aside>
 
       <div className="main">
-        <header className="topbar">
-          <span className="topbar-date">{currentDate || "Your workspace"}</span>
+        {/* Glass layer 2: top bar that page content scrolls underneath */}
+        <header ref={topbarLens.ref} className="topbar glass" style={topbarLens.style} onPointerMove={trackPointer}>
+          {topbarLens.defs}
+          <div className="topbar-left">
+            <span className="topbar-title">{navItems[activeIndex].label}</span>
+            <span className="topbar-date">{currentDate || "Your workspace"}</span>
+          </div>
           <div className="topbar-right">
-            <span className="pill glass"><span className={`dot ${backendStatus}`} />{statusText}</span>
-            <span className="avatar glass" aria-label="Local workspace">P</span>
+            <span className="pill"><span className={`dot ${backendStatus}`} />{statusText}</span>
+            <span className="avatar" aria-label="Local workspace">P</span>
           </div>
         </header>
 
@@ -370,7 +530,7 @@ export default function Home() {
               <p>{pageHeading.description}</p>
             </div>
             {activeSection === "assistant" && messages.length > 0 && (
-              <button className="soft-button glass" onClick={() => void resetConversation()} disabled={loading}>
+              <button className="soft-button" onClick={() => void resetConversation()} disabled={loading}>
                 <Icon name="refresh" size={15} /> New conversation
               </button>
             )}
@@ -380,29 +540,35 @@ export default function Home() {
 
           {activeSection === "overview" && (
             <>
-              <section className="ask glass">
-                <div className="ask-head">
-                  <span className="orb"><Icon name="spark" size={20} /></span>
-                  <div>
-                    <h2>What would you like to organise?</h2>
-                    <p>Ask in plain words. JARVIS only uses the details you share.</p>
+              <section className="hero surface">
+                <div className="hero-copy">
+                  <h2>What would you like to organise?</h2>
+                  <p>Ask in plain words. JARVIS only uses the details you share.</p>
+                  <form className="field" onSubmit={(event) => { event.preventDefault(); void sendMessage(); }}>
+                    <input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask about budgets, assignments, events…" aria-label="Message JARVIS" />
+                    <button type="submit" disabled={!input.trim() || loading} aria-label="Send message"><Icon name="send" size={17} /></button>
+                  </form>
+                  <div className="chips">
+                    {quickPrompts.map((prompt) => (
+                      <button key={prompt} onClick={() => startModulePrompt(prompt)}>{prompt}</button>
+                    ))}
                   </div>
                 </div>
-                <form className="composer" onSubmit={(event) => { event.preventDefault(); void sendMessage(); }}>
-                  <input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask about budgets, assignments, events…" aria-label="Message JARVIS" />
-                  <button type="submit" disabled={!input.trim() || loading} aria-label="Send message"><Icon name="send" size={17} /></button>
-                </form>
-                <div className="chips">
-                  {quickPrompts.map((prompt) => (
-                    <button key={prompt} onClick={() => startModulePrompt(prompt)}>{prompt}</button>
-                  ))}
+                <div className="hero-art" aria-hidden="true">
+                  <span className="hero-orb lg" />
+                  <span className="hero-orb sm" />
                 </div>
               </section>
 
               <h2 className="section-title">Focus areas</h2>
               <section className="cards">
                 {moduleCards.map((module) => (
-                  <button className={`card panel accent-${module.accent}`} key={module.id} onClick={() => openModule(module.id)}>
+                  <button
+                    className={`card surface accent-${module.accent}`}
+                    key={module.id}
+                    onClick={() => openModule(module.id)}
+                    onPointerMove={trackPointer}
+                  >
                     <span className="card-icon"><Icon name={module.icon} size={21} /></span>
                     <h3>{module.title}</h3>
                     <p>{module.description}</p>
@@ -417,7 +583,7 @@ export default function Home() {
 
           {activeSection === "assistant" && (
             <section className="assistant">
-              <div className="chat panel">
+              <div className="chat surface">
                 {messages.length === 0 ? (
                   <div className="welcome">
                     <span className="orb big"><Icon name="spark" size={26} /></span>
@@ -447,16 +613,15 @@ export default function Home() {
                     <div ref={chatEndRef} />
                   </div>
                 )}
-                <form className="composer glass floating" onSubmit={(event) => { event.preventDefault(); void sendMessage(); }}>
-                  <input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Message JARVIS…" aria-label="Message JARVIS" disabled={loading} />
-                  <button type="submit" disabled={loading || !input.trim()} aria-label="Send message"><Icon name="send" size={17} /></button>
-                </form>
+                <span className="scroll-edge" aria-hidden="true" />
+                {/* Glass layer 3: the composer floats over the messages */}
+                <ChatComposer value={input} onChange={setInput} onSubmit={() => void sendMessage()} loading={loading} />
               </div>
             </section>
           )}
 
           {selectedModule && (
-            <section className={`workspace panel accent-${selectedModule.accent}`}>
+            <section className={`workspace surface accent-${selectedModule.accent}`}>
               <span className="card-icon big"><Icon name={selectedModule.icon} size={24} /></span>
               <h2>Start with your information</h2>
               <p>This workspace shows only what you share or save. Tell JARVIS the real details to begin.</p>
