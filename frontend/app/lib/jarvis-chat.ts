@@ -91,6 +91,30 @@ export function getWsBase(): string {
   return api.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
 }
 
+export function getBackendUrls() {
+  if (typeof window !== "undefined") {
+    const params = new URLSearchParams(window.location.search);
+    const apiParam = params.get("api");
+    if (apiParam) {
+      const cleanUrl = apiParam.replace(/\/$/, "");
+      localStorage.setItem("jarvis_api_url", cleanUrl);
+    }
+    const saved = localStorage.getItem("jarvis_api_url");
+    if (saved) {
+      return {
+        httpUrl: saved,
+        wsUrl: saved.replace(/^https:/, "wss:").replace(/^http:/, "ws:"),
+      };
+    }
+    const host = window.location.hostname;
+    return {
+      httpUrl: `http://${host}:8000`,
+      wsUrl: `ws://${host}:8000`,
+    };
+  }
+  return { httpUrl: "http://localhost:8000", wsUrl: "ws://localhost:8000" };
+}
+
 const THREAD = "main";
 
 const threadPath = (moduleId: ModuleId) =>
