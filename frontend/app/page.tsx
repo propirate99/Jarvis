@@ -83,7 +83,6 @@ function ModulePage({
 }
 
 export default function Home() {
-  console.log("=== HOME COMPONENT EXECUTING ===");
   const [activeId, setActiveId] = useState<ModuleId>("overview");
   const [visited, setVisited] = useState<ModuleId[]>(["overview"]);
   const [backendStatus, setBackendStatus] = useState<"checking" | "online" | "offline">("checking");

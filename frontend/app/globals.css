@@ -332,7 +332,19 @@ p {
   text-align: left;
 }
 
-.brand-mark,
+.brand-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  overflow: hidden;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: #000000;
+  border: 1px solid rgba(255, 170, 60, 0.35);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
 .orb {
   display: grid;
   place-items: center;

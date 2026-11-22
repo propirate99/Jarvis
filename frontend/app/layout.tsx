@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   description: "Your personal JARVIS workspace",
   icons: {
     icon: "/app-logo.png",
+    shortcut: "/app-logo.png",
+    apple: "/app-logo.png",
   },
 };
 

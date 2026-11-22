@@ -57,6 +57,14 @@ TMP_ENV="$(mktemp)"
 printf 'NEXT_PUBLIC_JARVIS_API_URL=%s\n' "$API_URL" >>"$TMP_ENV"
 mv "$TMP_ENV" "$ENV_FILE"
 
+# ── Pre-build frontend for instant hydration (eliminates Turbopack dev lag) ──
+echo "Building optimized frontend assets..."
+(
+  cd "$ROOT/frontend"
+  export NEXT_PUBLIC_JARVIS_API_URL="$API_URL"
+  ./node_modules/.bin/next build
+)
+
 # ── Cleanup handler ────────────────────────────────────────────────────────────
 cleanup() {
   echo ""
@@ -97,12 +105,11 @@ echo ""
 ) &
 BACKEND_PID=$!
 
-# ── Start Next.js frontend (binds to 0.0.0.0:3000) ───────────────────────────
+# ── Start Next.js frontend in production mode (instant hydration on phones) ──
 (
   cd "$ROOT/frontend"
   export NEXT_PUBLIC_JARVIS_API_URL="$API_URL"
-  export JARVIS_ALLOWED_DEV_ORIGINS="${WIFI_IP}:3000,localhost:3000,127.0.0.1:3000,${WIFI_IP}:8000"
-  exec ./node_modules/.bin/next dev --hostname 0.0.0.0 --port 3000
+  exec ./node_modules/.bin/next start --hostname 0.0.0.0 --port 3000
 ) &
 FRONTEND_PID=$!
 
