@@ -57,6 +57,10 @@ TMP_ENV="$(mktemp)"
 printf 'NEXT_PUBLIC_JARVIS_API_URL=%s\n' "$API_URL" >>"$TMP_ENV"
 mv "$TMP_ENV" "$ENV_FILE"
 
+# ── Clean previous build artifacts & stale caches ────────────────────────────
+echo "Cleaning stale frontend cache..."
+rm -rf "$ROOT/frontend/.next" "$ROOT/frontend/out"
+
 # ── Pre-build frontend for instant hydration (eliminates Turbopack dev lag) ──
 echo "Building optimized frontend assets..."
 (
