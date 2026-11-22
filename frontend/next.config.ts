@@ -10,8 +10,6 @@ const allowedDevOrigins = [
 ];
 
 const nextConfig: NextConfig = {
-  cacheComponents: true,
-  partialPrefetching: true,
   allowedDevOrigins,
   async rewrites() {
     return [
