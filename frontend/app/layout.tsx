@@ -28,6 +28,13 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: dark)", color: "#0c0905" },
     { media: "(prefers-color-scheme: light)", color: "#fbf3e2" },
   ],
+  // viewport-fit=cover lets CSS env(safe-area-inset-*) variables work on
+  // iOS Safari so the bottom dock and composer are never clipped by the
+  // home indicator on notched / Dynamic Island iPhones.
+  viewportFit: "cover",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
