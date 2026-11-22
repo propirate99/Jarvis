@@ -25,26 +25,70 @@ export type ChatMessage = {
    ===================================================================== */
 
 /**
- * Dynamic API and WebSocket Base URLs.
- * Dynamically resolves to window.location.hostname so requests from mobile devices
- * target the Mac host machine on port 8000 directly (SSE real-time streaming)
- * with seamless fallback to Next.js relative proxy.
+ * Invisible backend API URL resolution:
+ * 1. NEXT_PUBLIC_API_URL environment variable if provided at build time (e.g., via GitHub Actions)
+ * 2. Query parameter override (?api=https://... or ?backend=...) saved silently to localStorage
+ * 3. Stored localStorage URL ("jarvis_api_url")
+ * 4. Dynamic window.location.hostname fallback when running locally on Wi-Fi (or 127.0.0.1:8000)
  */
 export function getApiBase(): string {
-  if (typeof window !== "undefined") {
-    const host = window.location.hostname;
+  const envUrl =
+    process.env.NEXT_PUBLIC_API_URL ||
+    process.env.NEXT_PUBLIC_JARVIS_API_URL ||
+    process.env.NEXT_PUBLIC_JARVIS_API;
+
+  if (typeof window === "undefined") {
+    return envUrl ? envUrl.trim().replace(/\/+$/, "") : "http://127.0.0.1:8000";
+  }
+
+  // Check URL query parameter: ?api=https://... or ?backend=...
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const queryApi = params.get("api") || params.get("backend");
+    if (queryApi && queryApi.trim()) {
+      const cleanUrl = queryApi.trim().replace(/\/+$/, "");
+      localStorage.setItem("jarvis_api_url", cleanUrl);
+      return cleanUrl;
+    }
+  } catch {
+    // ignore query parameter access errors
+  }
+
+  // Check silently stored localStorage URL
+  try {
+    const stored = localStorage.getItem("jarvis_api_url");
+    if (stored && stored.trim()) {
+      return stored.trim().replace(/\/+$/, "");
+    }
+  } catch {
+    // ignore localStorage access errors
+  }
+
+  // Build-time env URL fallback
+  if (envUrl && envUrl.trim()) {
+    return envUrl.trim().replace(/\/+$/, "");
+  }
+
+  // Dynamic hostname resolution for local development & Wi-Fi LAN
+  const host = window.location.hostname;
+  const isLocal =
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    /^192\.168\.\d+\.\d+$/.test(host) ||
+    /^10\.\d+\.\d+\.\d+$/.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(host);
+
+  if (isLocal) {
     return `${window.location.protocol}//${host}:8000`;
   }
-  return process.env.NEXT_PUBLIC_JARVIS_API_URL || "http://127.0.0.1:8000";
+
+  // Hosted on GitHub Pages without configured tunnel defaults to local backend
+  return "http://127.0.0.1:8000";
 }
 
 export function getWsBase(): string {
-  if (typeof window !== "undefined") {
-    const host = window.location.hostname;
-    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-    return `${proto}//${host}:8000`;
-  }
-  return "ws://127.0.0.1:8000";
+  const api = getApiBase();
+  return api.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
 }
 
 const THREAD = "main";
@@ -163,17 +207,17 @@ export async function resetThread(moduleId: ModuleId): Promise<void> {
 
 export async function checkHealth(): Promise<void> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 4000);
+  const timer = setTimeout(() => controller.abort(), 3500);
   try {
     const directUrl = `${getApiBase()}/health`;
     try {
       const response = await fetch(directUrl, { signal: controller.signal });
       if (response.ok) return;
     } catch {
-      // fallback to proxy
-      const response = await fetch("/health", { signal: controller.signal });
-      if (response.ok) return;
+      // Direct call failed, fallback to Next.js proxy rewrite
     }
+    const proxyResponse = await fetch("/health", { signal: controller.signal });
+    if (proxyResponse.ok) return;
     throw new Error("Health check failed");
   } finally {
     clearTimeout(timer);
@@ -200,6 +244,9 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
       ...init,
       headers: { "Content-Type": "application/json", ...init?.headers },
     });
+    if (!response.ok) {
+      throw new Error(`Direct request returned status ${response.status}`);
+    }
   } catch {
     // If direct connection fails, fall back to Next.js proxy rewrite
     response = await fetch(path, {
